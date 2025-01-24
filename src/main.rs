@@ -117,10 +117,7 @@ mod tests {
         extract::connect_info::MockConnectInfo,
         http::{self, Request, StatusCode},
     };
-    use http_body_util::BodyExt; // for `collect`
-    use serde_json::{json, Value};
-    use tokio::net::TcpListener;
-    use tower::{Service, ServiceExt};
+    use http_body_util::BodyExt;    use tower::ServiceExt;
     use types::pocket::PocketRequest; // for `call`, `oneshot`, and `ready`
 
     #[tokio::test]
