@@ -1,0 +1,25 @@
+{
+    "accounts": [
+        {
+            "id": [106, 119, 6, 88, 122, 1, 83, 88, 5, 7, 85, 110, 4, 90, 81, 110, 119, 112, 118, 85, 110, 79, 1, 65],
+            "account_number": [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+            "account_name": "Main Checking",
+            "bank_id": "FNBK001",
+            "bank_name": "First National Bank"
+        },
+        {
+            "id": [9, 73, 120, 2, 107, 67, 83, 90, 89, 100, 88, 117, 119, 83, 4, 72, 79, 80, 81, 97, 79, 0, 1, 111],
+            "account_number": [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+            "account_name": "Savings Account", 
+            "bank_id": "CUNY005",
+            "bank_name": "Community Credit Union"
+        },
+        {
+            "id": [109, 5, 9, 82, 7, 69, 4, 108, 120, 85, 115, 8, 0, 7, 98, 81, 8, 100, 9, 8, 86, 1, 0, 1],
+            "account_number": [5, 4, 3, 2, 1, 0, 9, 8, 7, 6],
+            "account_name": "Business Account",
+            "bank_id": "METB010", 
+            "bank_name": "Metropolitan Bank"
+        }
+    ]
+}

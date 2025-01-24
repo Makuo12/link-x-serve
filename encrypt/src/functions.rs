@@ -1,0 +1,129 @@
+
+use aes::{cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt}, Aes128};
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use aes_gcm::{
+    aead::{Aead, AeadCore, OsRng}, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
+};
+
+
+
+
+pub(crate) fn modify_connect_code(code: &mut [u8; 16], connect_msg: &[u8; 9]) {
+    let mut rng = StdRng::from_entropy();
+    for i in 0..16 {
+        if i > 3 && i < 13 {
+            // middle
+            code[i] = connect_msg[i - 4];
+        } else {
+            // end
+            code[i] = rng.gen_range(b'a'..=b'z');
+        } 
+    }
+}
+
+pub(crate) fn generate_random_values(count: usize) -> Vec<u8> {
+    let mut key: Vec<u8> = Vec::new();
+    let mut rng = StdRng::from_entropy();
+    for _ in 0..count {
+        let decider = rng.gen_range(0..=2);
+        if decider == 0 {
+            key.push(rng.gen_range(b'A'..=b'Z'));
+        } else if decider == 1 {
+            key.push(rng.gen_range(b'a'..=b'z'));
+        } else {
+            key.push(rng.gen_range(0..=9));
+        }
+    }
+    key
+}
+
+pub(crate) fn vec_to_string(vec: &[u8]) -> String {
+    let mut result = String::new();
+    for i in vec {
+        if *i < 10 {
+            result+=&format!("{}", *i);
+        } else {
+            result.push(*i as char);
+        }
+    }
+    return result;
+}
+
+
+pub(crate) fn decipher_price(price: [u8; 16], price_key: [u8; 16]) -> u64{
+    let mut code: Vec<i32> = Vec::new();
+    let mut block = GenericArray::from(price);
+    let key = GenericArray::from(price_key);
+    // Initialize cipher
+    let cipher = Aes128::new(&key);
+    cipher.decrypt_block(&mut block);
+    for i in block {
+        if i < 10 {
+            code.push(i as i32);
+        }
+    }
+    return code.iter().fold(0, |acc, value| acc * 10 + *value as u64);
+}
+
+pub(crate) fn cipher_price(price: [u8; 16], price_key: [u8; 16]) -> [u8;16] {
+    let mut code: [u8; 16] = [0; 16];
+    let mut block = GenericArray::from(price);
+    let key = GenericArray::from(price_key);
+    // Initialize cipher
+    let cipher = Aes128::new(&key);
+    cipher.encrypt_block(&mut block);
+    for i in block.iter().enumerate() {
+        code[i.0] = *i.1;
+    }
+    return code;
+}
+pub(crate) fn generate_cipher_to_connect(connect_msg: &[u8; 9], connect_key: [u8; 16]) -> [u8; 16] {
+    // Encrypt the message
+    let mut code: [u8; 16] = [0; 16];
+    modify_connect_code(&mut code, connect_msg);
+    let mut block = GenericArray::from(code);
+    let key = GenericArray::from(connect_key);
+    // Initialize cipher
+    let cipher = Aes128::new(&key);
+    cipher.encrypt_block(&mut block);
+    for i in block.iter().enumerate() {
+        code[i.0] = *i.1;
+    }
+    return code;
+}
+pub(crate) fn generate_decipher_to_connect(cipher: [u8; 16], connect_key: [u8; 16]) -> [u8; 16] {
+    // Encrypt the message
+    let mut block = GenericArray::from(cipher);
+    let key = GenericArray::from(connect_key);
+    // Initialize cipher
+    let cipher = Aes128::new(&key);
+    cipher.decrypt_block(&mut block);
+    let mut code: [u8; 16] = [0; 16];
+    for i in block.iter().enumerate() {
+        code[i.0] = *i.1;
+    }
+    return code;
+}
+
+pub fn encrypt_device_id(data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
+    let key = Key::<Aes256Gcm>::from_slice(key);
+    let cipher = Aes256Gcm::new(key);
+    
+    let nonce = Aes256Gcm::generate_nonce(&mut rand::thread_rng());
+    let ciphertext = cipher.encrypt(&nonce, data)?;
+    
+    let mut result = nonce.to_vec();
+    result.extend_from_slice(&ciphertext);
+    
+    Ok(result)
+}
+
+pub fn decrypt_device_id(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
+    let key = Key::<Aes256Gcm>::from_slice(key);
+    let cipher = Aes256Gcm::new(key);
+    
+    let (nonce, ciphertext) = encrypted_data.split_at(12);
+    let nonce = Nonce::from_slice(nonce);
+    
+    cipher.decrypt(nonce, ciphertext)
+}

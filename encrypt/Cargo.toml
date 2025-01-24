@@ -1,0 +1,11 @@
+[package]
+name = "encrypt"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aes = "0.8.4"
+rand = "0.8.5"
+uuid = { version = "1.0", features = ["v4"] }
+aes-gcm = "0.10.3"
+dotenvy = "0.15.7"
