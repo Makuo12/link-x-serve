@@ -37,8 +37,8 @@ async fn main() {
             return
         }
     };
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    println!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app()).await.unwrap();
 }
 
@@ -114,7 +114,6 @@ mod tests {
     use super::*;
     use axum::{
         body::Body,
-        extract::connect_info::MockConnectInfo,
         http::{self, Request, StatusCode},
     };
     use http_body_util::BodyExt;    use tower::ServiceExt;
@@ -156,8 +155,8 @@ mod tests {
             .uri("/api/controller")
             .header("Content-Type", "application/json")
             .header("XMinisterApiKey", "nl31kPIk8X7U7w15");
-        let data: Vec<u8> = vec![94, 187, 183, 118, 114, 78, 165, 255, 235, 240, 193, 125, 142, 163, 20, 45, 158, 201, 90, 72, 30, 179, 250, 109, 197, 100, 161, 62, 85, 55, 122, 32, 30, 121, 152, 44, 155, 28, 153, 135, 248, 189, 243, 198, 179, 152, 31, 39, 129, 119, 93, 152, 65, 45, 50];
-        let price: Vec<u8> = vec![5, 6, 4, 0, b'a', b'c'];
+        let data: Vec<u8> = vec![94, 187, 183, 118, 114, 78, 165, 255, 235, 240, 193, 125, 142, 163, 20, 45, 158, 201, 90, 72, 30, 179, 250, 109, 197, 100, 161, 62, 85, 55, 122, 32, 30, 121, 152, 44, 155, 28, 153, 135, 248, 189, 243, 198, 179, 152, 31, 39, 129, 119, 93, 152, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100];
+        let price: Vec<u8> = vec![242, 8, 63, 97, 232, 72, 68, 66, 39, 154, 177, 80, 194, 59, 135, 119];
         let req = PocketRequest {data,price};
         let req_json = serde_json::to_vec(&req).unwrap();
         let body = Body::from(req_json);

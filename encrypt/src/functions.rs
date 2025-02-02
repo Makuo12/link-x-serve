@@ -51,15 +51,15 @@ pub(crate) fn vec_to_string(vec: &[u8]) -> String {
 
 
 pub(crate) fn decipher_price(price: [u8; 16], price_key: [u8; 16]) -> u64{
-    let mut code: Vec<i32> = Vec::new();
+    let mut code: Vec<u32> = Vec::new();
     let mut block = GenericArray::from(price);
     let key = GenericArray::from(price_key);
     // Initialize cipher
     let cipher = Aes128::new(&key);
     cipher.decrypt_block(&mut block);
     for i in block {
-        if i < 10 {
-            code.push(i as i32);
+        if let Some(value) = (i as char).to_digit(10) {
+            code.push(value);
         }
     }
     return code.iter().fold(0, |acc, value| acc * 10 + *value as u64);
