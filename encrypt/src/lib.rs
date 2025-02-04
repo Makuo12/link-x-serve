@@ -70,7 +70,6 @@ mod tests {
     use functions::{encrypt_device_id, 
         generate_random_values, generate_cipher_to_connect, 
         generate_decipher_to_connect, vec_to_string};
-
     use crate::functions::aes_cipher;
 
     use super::*;
@@ -124,13 +123,19 @@ mod tests {
     }
 
     #[test]
-    fn test_device_uuid() {
+    fn test_device_uuid_max() {
         let device_uuid = [106, 119, 6, 88, 122, 1, 83, 88, 5, 7, 85, 110, 4, 90, 81, 110, 119, 112, 118, 85, 110, 79, 1, 65];
         let cipher = encrypt_device_id(&device_uuid, &ENCRYPTION_KEY_DEVICE_ID).unwrap();
         let decipher = decrypt_device_id(&cipher, &ENCRYPTION_KEY_DEVICE_ID).expect("nothing found");
         assert!(decipher == device_uuid);
     }
-
+    #[test]
+    fn test_device_id() {
+        let id: [u8; 16] = [66, 31, 57, 55, 137, 160, 33, 86, 251, 127, 189, 100, 216, 65, 216, 141];
+        let decipher = handle_decipher_device_id(id.to_vec(), ENCRYPTION_DEVICE_ID_KEY.to_vec());
+        panic!("values {:?}", decipher);
+        
+    }
     #[test]
     fn handle_format_string() {
         // panic!("generate {:?}", vec_to_string(&generate_random_values(16)));
