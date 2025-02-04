@@ -1,5 +1,5 @@
 
-use aes::{cipher::{generic_array::GenericArray, BlockDecrypt, BlockEncrypt}, Aes128};
+use aes::{cipher::{consts::{B0, B1}, generic_array::GenericArray, typenum::{UInt, UTerm}, BlockDecrypt, BlockEncrypt}, Aes128};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use aes_gcm::{
     aead::{Aead, AeadCore, OsRng}, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
@@ -31,7 +31,7 @@ pub(crate) fn generate_random_values(count: usize) -> Vec<u8> {
         } else if decider == 1 {
             key.push(rng.gen_range(b'a'..=b'z'));
         } else {
-            key.push(rng.gen_range(0..=9));
+            key.push(rng.gen_range(b'0'..=b'9'));
         }
     }
     key
@@ -40,32 +40,42 @@ pub(crate) fn generate_random_values(count: usize) -> Vec<u8> {
 pub(crate) fn vec_to_string(vec: &[u8]) -> String {
     let mut result = String::new();
     for i in vec {
-        if *i < 10 {
-            result+=&format!("{}", *i);
-        } else {
-            result.push(*i as char);
-        }
+        result.push(*i as char);
     }
     return result;
 }
 
-
-pub(crate) fn decipher_price(price: [u8; 16], price_key: [u8; 16]) -> u64{
-    let mut code: Vec<u32> = Vec::new();
-    let mut block = GenericArray::from(price);
-    let key = GenericArray::from(price_key);
+// basic_decipher means it uses the Aes128 algorithm to decrypt (16 bits long)
+fn aes_decipher(ciphertext: [u8; 16], key: [u8; 16]) -> GenericArray<u8, UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>>{
+    let mut block = GenericArray::from(ciphertext);
+    let key = GenericArray::from(key);
     // Initialize cipher
     let cipher = Aes128::new(&key);
     cipher.decrypt_block(&mut block);
-    for i in block {
-        if let Some(value) = (i as char).to_digit(10) {
+    block
+}
+
+pub(crate) fn price_decipher(price: [u8; 16], price_key: [u8; 16]) -> u64{
+    let mut code: Vec<u32> = Vec::new();
+    let block = aes_decipher(price, price_key); 
+    for i in block.iter() {
+        if let Some(value) = (*i as char).to_digit(10) {
             code.push(value);
         }
     }
     return code.iter().fold(0, |acc, value| acc * 10 + *value as u64);
 }
 
-pub(crate) fn cipher_price(price: [u8; 16], price_key: [u8; 16]) -> [u8;16] {
+pub(crate) fn basic_decipher(ciphertext: [u8; 16], key: [u8; 16]) -> [u8; 16] { 
+    let mut code: [u8; 16] = [0; 16];
+    let block = aes_decipher(ciphertext, key); 
+    for i in block.iter().enumerate() {
+        code[i.0] = *i.1;
+    }
+    code
+}
+// basic_cipher means it uses the Aes128 algorithm to encrypt (16 bits long)
+pub(crate) fn aes_cipher(price: [u8; 16], price_key: [u8; 16]) -> [u8;16] {
     let mut code: [u8; 16] = [0; 16];
     let mut block = GenericArray::from(price);
     let key = GenericArray::from(price_key);
