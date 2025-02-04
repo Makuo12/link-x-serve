@@ -1,9 +1,8 @@
 mod functions;
-use aes_gcm::{
-    aead::{Aead, AeadCore, OsRng}, Aes256Gcm, AesGcm, Error, Key, KeyInit, Nonce // Or `Aes128Gcm`
-};
-use functions::{decipher_price, decrypt_device_id, generate_cipher_to_connect, modify_connect_code};
+use aes_gcm::Error;
+use functions::{basic_decipher, decrypt_device_id, generate_cipher_to_connect, price_decipher};
 
+// const B: [u8; 16] = [9, 73, 120, 2, 107, 67, 83, 90, 89, 100, 88, 117, 119, 83, 4, 72, 79, 80, 81, 97, 79, 0, 1, 111];
 
 
 pub fn handle_decipher_price(price_key: Vec<u8>, price: Vec<u8>) -> u64 {
@@ -15,10 +14,23 @@ pub fn handle_decipher_price(price_key: Vec<u8>, price: Vec<u8>) -> u64 {
     for i in price.iter().enumerate() {
         msg[i.0] = *i.1;
     }
-    decipher_price(msg, key)
+    price_decipher(msg, key)
 }
 
-pub fn handle_decipher_device_id(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<[u8; 24], Error> {
+pub fn handle_decipher_device_id(cipher_key: Vec<u8>, ciphertext: Vec<u8>) -> Result<[u8; 16], Error> {
+    let mut key: [u8; 16] = [0; 16];   
+    let mut msg: [u8; 16] = [0; 16];   
+    for i in cipher_key.iter().enumerate() {
+        key[i.0] = *i.1;
+    }
+    for i in ciphertext.iter().enumerate() {
+        msg[i.0] = *i.1;
+    }
+    let result = basic_decipher(msg, key);
+    Ok(result)
+} 
+
+pub fn handle_decipher_device_id_max(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<[u8; 24], Error> {
     let mut value = [0; 24];
     if ciphertext.len() < 52 {
         return Err(Error)
@@ -34,8 +46,6 @@ pub fn handle_decipher_device_id(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<[u
     }
     Ok(value)
 } 
-
-
 
 pub fn handle_cipher_connect(connect_key: Vec<u8>, connect_msg: String) -> [u8; 16] {
     let mut key: [u8; 16] = [0; 16];   
@@ -57,11 +67,14 @@ pub fn handle_env_bytes(value: String) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use functions::{cipher_price, encrypt_device_id, 
+    use functions::{encrypt_device_id, 
         generate_random_values, generate_cipher_to_connect, 
         generate_decipher_to_connect, vec_to_string};
 
+    use crate::functions::aes_cipher;
+
     use super::*;
+    const ENCRYPTION_DEVICE_ID_KEY: [u8; 16] = [122, 80, 122, 105, 115, 78, 53, 55, 122, 102, 72, 119, 119, 103, 50, 76];
     const ENCRYPTION_KEY_DEVICE_ID: [u8; 32] = [80, 52, 48, 85, 87, 99, 48, 56, 107, 48, 117, 105, 115, 56, 54, 116, 79, 103, 54, 86, 100, 56, 101, 90, 109, 104, 84, 99, 119, 90, 102, 120];
     const ENCRYPTION_KEY_PRICE: [u8; 16] = [0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F];
     const ENCRYPTION_CONNECT_KEY: [u8; 16] = [0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F];
@@ -74,7 +87,7 @@ mod tests {
         let mut good_lowcase = false;
         let mut good_uppercase = false;
         for byte in key.iter() {
-            if *byte < 10 {
+            if byte.is_ascii_digit() {
                 good_num = true;
             } else if byte.is_ascii_uppercase() {
                 good_uppercase = true;
@@ -82,7 +95,7 @@ mod tests {
                 good_lowcase = true;
             }
         }
-        
+        panic!("{:?}", key);
         assert!(good_num && good_uppercase && good_lowcase);
     }
     #[test]
@@ -90,16 +103,16 @@ mod tests {
         let cipher = generate_cipher_to_connect(&CONNECT_MSG, ENCRYPTION_CONNECT_KEY);
         let decipher = generate_decipher_to_connect(cipher, ENCRYPTION_CONNECT_KEY);
         assert!(decipher.contains(&b'o') && decipher.contains(&b'l'));
-
     }
+    
     #[test]
     fn test_price_key() {
         let mut price: [u8; 16] = [b'a'; 16];
         for i in 0..2 {
-            price[i] = 9;
+            price[i] = b'9';
         } 
-        let cipher = cipher_price(price, ENCRYPTION_KEY_PRICE);
-        let decipher = decipher_price(cipher, ENCRYPTION_KEY_PRICE);
+        let cipher = aes_cipher(price, ENCRYPTION_KEY_PRICE);
+        let decipher = price_decipher(cipher, ENCRYPTION_KEY_PRICE);
         assert_eq!(decipher, 99);
     }
 
@@ -114,17 +127,16 @@ mod tests {
     fn test_device_uuid() {
         let device_uuid = [106, 119, 6, 88, 122, 1, 83, 88, 5, 7, 85, 110, 4, 90, 81, 110, 119, 112, 118, 85, 110, 79, 1, 65];
         let cipher = encrypt_device_id(&device_uuid, &ENCRYPTION_KEY_DEVICE_ID).unwrap();
-        panic!("cipher{:?}", cipher);
         let decipher = decrypt_device_id(&cipher, &ENCRYPTION_KEY_DEVICE_ID).expect("nothing found");
         assert!(decipher == device_uuid);
     }
 
     #[test]
     fn handle_format_string() {
-        panic!("{:?}", vec_to_string(&generate_random_values(16)));
+        // panic!("generate {:?}", vec_to_string(&generate_random_values(16)));
         let mut new_data: Vec<u8> = Vec::new();
         let data: Vec<u8> = "80, 52, 48, 85, 87, 99, 48, 56, 107, 48, 117, 105, 115, 56, 54, 116, 79, 103, 54, 86, 100, 56, 101, 90, 109, 104, 84, 99, 119, 90, 102, 120".to_string().split(",").map(|x| x.trim().parse::<u8>().unwrap()).collect();
-        panic!("{:?}", data)
+        assert!(true);
     }
 
     // #[test]

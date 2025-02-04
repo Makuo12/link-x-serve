@@ -6,7 +6,7 @@ use crate::types::account::{Account, AccountItemStore, AccountResponse};
 
 
 pub struct AccountStore {
-    pub accounts: HashMap<[u8; 24], Account>
+    pub accounts: HashMap<[u8; 16], Account>
 }
 
 impl AccountStore {
@@ -15,7 +15,7 @@ impl AccountStore {
         let contents = fs::read_to_string("accounts.json").unwrap();
         let data: AccountItemStore = serde_json::from_str(&contents).unwrap();
         for item in data.accounts {
-            let mut id: [u8; 24] = [0; 24];
+            let mut id: [u8; 16] = [0; 16];
             for i in item.id.iter().enumerate() {
                 id[i.0] = *i.1;
             }
@@ -35,7 +35,7 @@ impl AccountStore {
             accounts
         }
     }
-    pub fn get_account_res(&self, id: &[u8; 24]) -> Option<AccountResponse> {
+    pub fn get_account_res(&self, id: &[u8; 16]) -> Option<AccountResponse> {
         let account = self.accounts.get(id)?;
         let mut account_name = String::new();
         let mut bank_id = String::new();
