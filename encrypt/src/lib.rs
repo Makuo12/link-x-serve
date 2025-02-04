@@ -20,6 +20,9 @@ pub fn handle_decipher_price(price_key: Vec<u8>, price: Vec<u8>) -> u64 {
 
 pub fn handle_decipher_device_id(key: Vec<u8>, ciphertext: Vec<u8>) -> Result<[u8; 24], Error> {
     let mut value = [0; 24];
+    if ciphertext.len() < 52 {
+        return Err(Error)
+    }
     let result = match decrypt_device_id(&ciphertext[..52], &key) {
         Ok(v) => v,
         Err(err) => {
