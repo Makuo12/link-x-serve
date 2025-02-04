@@ -11,7 +11,7 @@ pub fn handle_decipher_price(price_key: Vec<u8>, price: Vec<u8>) -> u64 {
     for i in price_key.iter().enumerate() {
         key[i.0] = *i.1;
     }
-    for i in price.iter().enumerate() {
+    for i in price[0..16].iter().enumerate() {
         msg[i.0] = *i.1;
     }
     price_decipher(msg, key)
@@ -23,7 +23,7 @@ pub fn handle_decipher_device_id(cipher_key: Vec<u8>, ciphertext: Vec<u8>) -> Re
     for i in cipher_key.iter().enumerate() {
         key[i.0] = *i.1;
     }
-    for i in ciphertext.iter().enumerate() {
+    for i in ciphertext[0..16].iter().enumerate() {
         msg[i.0] = *i.1;
     }
     let result = basic_decipher(msg, key);

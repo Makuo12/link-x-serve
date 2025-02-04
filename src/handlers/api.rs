@@ -24,6 +24,9 @@ pub async fn handle_device_pocket(State(account_store): State<Arc<RwLock<Account
     .map_err(|e| AppError::EnvError(e).into_response())?;
     let device_id_key = env::var(ENCRYPTION_DEVICE_ID_KEY)
     .map_err(|e| AppError::EnvError(e).into_response())?;
+    if pocket.price.len() < 16 || pocket.data.len() < 16 {
+        return Ok(AppError::DeviceNotFound.into_response());
+    }
     let price = handle_decipher_price(
         handle_env_bytes(price_key)
         , pocket.price);
