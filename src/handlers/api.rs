@@ -5,7 +5,7 @@ use encrypt::{handle_decipher_device_id, handle_decipher_price, handle_env_bytes
 use tokio::sync::RwLock;
 use tracing::info;
 
-use crate::{store::AccountStore, tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_KEY_DEVICE_ID, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse}}, AppError};
+use crate::{store::AccountStore, tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_DEVICE_ID_KEY, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse}}, AppError};
 
 
 pub async fn handle_connect_msg() -> Result<impl IntoResponse, Response> {
@@ -22,7 +22,7 @@ pub async fn handle_connect_msg() -> Result<impl IntoResponse, Response> {
 pub async fn handle_device_pocket(State(account_store): State<Arc<RwLock<AccountStore>>>, Json(pocket): Json<PocketRequest>) -> Result<impl IntoResponse, Response> {
     let price_key = env::var(ENCRYPTION_KEY_PRICE)
     .map_err(|e| AppError::EnvError(e).into_response())?;
-    let device_id_key = env::var(ENCRYPTION_KEY_DEVICE_ID)
+    let device_id_key = env::var(ENCRYPTION_DEVICE_ID_KEY)
     .map_err(|e| AppError::EnvError(e).into_response())?;
     let price = handle_decipher_price(
         handle_env_bytes(price_key)
