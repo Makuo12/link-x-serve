@@ -5,7 +5,7 @@
             "account_number": [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
             "account_name": "James Fisher",
             "bank_id": "FNBK001",
-            "bank_name": "Providus Bank"
+            "bank_name": "Zenith Bank"
         },
         {
             "id": [72, 53, 81, 109, 88, 53, 108, 53, 53, 119, 82, 87, 119, 49, 75, 74],            "account_number": [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
@@ -17,7 +17,7 @@
             "id": [66, 84, 74, 54, 53, 109, 50, 99, 73, 49, 86, 50, 89, 50, 51, 73],            "account_number": [5, 4, 3, 2, 1, 0, 9, 8, 7, 6],
             "account_name": "John Smith",
             "bank_id": "METB010", 
-            "bank_name": "Metropolitan Bank"
+            "bank_name": "First Bank"
         }
     ]
 }

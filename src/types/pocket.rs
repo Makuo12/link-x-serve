@@ -14,6 +14,11 @@ pub struct PocketConnectMsgResponse {
 }
 
 #[derive(Serialize, Deserialize)]
+pub struct TestResponse {
+    pub success: bool,
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct PocketResponse {
     pub price: u64,
     pub account: AccountResponse,

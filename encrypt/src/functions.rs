@@ -2,7 +2,7 @@
 use aes::{cipher::{consts::{B0, B1}, generic_array::GenericArray, typenum::{UInt, UTerm}, BlockDecrypt, BlockEncrypt}, Aes128};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use aes_gcm::{
-    aead::{Aead, AeadCore, OsRng}, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
+    aead::{Aead, AeadCore}, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
 };
 
 
@@ -45,7 +45,7 @@ pub(crate) fn vec_to_string(vec: &[u8]) -> String {
     return result;
 }
 
-// basic_decipher means it uses the Aes128 algorithm to decrypt (16 bits long)
+// aes_decipher means it uses the Aes128 algorithm to decrypt (16 bits long)
 fn aes_decipher(ciphertext: [u8; 16], key: [u8; 16]) -> GenericArray<u8, UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>>{
     let mut block = GenericArray::from(ciphertext);
     let key = GenericArray::from(key);

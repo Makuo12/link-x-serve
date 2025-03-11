@@ -76,9 +76,9 @@ mod tests {
     const ENCRYPTION_DEVICE_ID_KEY: [u8; 16] = [122, 80, 122, 105, 115, 78, 53, 55, 122, 102, 72, 119, 119, 103, 50, 76];
     const ENCRYPTION_KEY_DEVICE_ID: [u8; 32] = [80, 52, 48, 85, 87, 99, 48, 56, 107, 48, 117, 105, 115, 56, 54, 116, 79, 103, 54, 86, 100, 56, 101, 90, 109, 104, 84, 99, 119, 90, 102, 120];
     const ENCRYPTION_KEY_PRICE: [u8; 16] = [0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,0x1C,0x1D,0x1E,0x1F];
-    const ENCRYPTION_CONNECT_KEY: [u8; 16] = [0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,0x0E,0x0F];
+    const ENCRYPTION_CONNECT_KEY: [u8; 16] = [3, 109, 87, 69, 7, 100, 107, 82, 79, 82, 112, 100, 7, 81, 0, 3];
     const CONNECT_MSG: [u8; 9] = *b"ozxlerfor";
-
+    const DRIVER_CONNECT_MSG: [u8; 9] = *b"macfiller";
     #[test]
     fn test_random_number_generator() {
         let key = generate_random_values(16);
@@ -94,14 +94,14 @@ mod tests {
                 good_lowcase = true;
             }
         }
-        panic!("{:?}", key);
         assert!(good_num && good_uppercase && good_lowcase);
     }
     #[test]
     fn test_api_connect() {
-        let cipher = generate_cipher_to_connect(&CONNECT_MSG, ENCRYPTION_CONNECT_KEY);
+        let cipher = generate_cipher_to_connect(&DRIVER_CONNECT_MSG, ENCRYPTION_CONNECT_KEY);
         let decipher = generate_decipher_to_connect(cipher, ENCRYPTION_CONNECT_KEY);
-        assert!(decipher.contains(&b'o') && decipher.contains(&b'l'));
+        panic!("{:?}, {:?}", cipher, decipher.map(|c| c as char));
+        assert!(decipher.contains(&b'l') && decipher.contains(&b'l'));
     }
     
     #[test]
@@ -133,7 +133,6 @@ mod tests {
     fn test_device_id() {
         let id: [u8; 16] = [66, 31, 57, 55, 137, 160, 33, 86, 251, 127, 189, 100, 216, 65, 216, 141];
         let decipher = handle_decipher_device_id(id.to_vec(), ENCRYPTION_DEVICE_ID_KEY.to_vec());
-        panic!("values {:?}", decipher);
         
     }
     #[test]

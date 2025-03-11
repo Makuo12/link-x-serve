@@ -7,15 +7,14 @@ use std::{collections::HashSet, env::{self, VarError}, sync::Arc};
 
 use axum::{extract::{FromRequest, Request, State}, http::status::StatusCode, middleware::{self, Next}, response::{Html, IntoResponse, Response}, routing::{get, post}, Router};
 use encrypt;
-use handlers::api::{handle_api_key, handle_connect_msg, handle_device_pocket};
+use handlers::api::{handle_api_key, handle_connect_msg, handle_device_pocket, payment_route};
 use serde::Serialize;
 use store::AccountStore;
 use tokio::sync::RwLock;
-use tools::{constant::ENCRYPTION_CONNECT_KEY, setup::setup_log};
 use tracing::{debug, info, warn};
 use tracing_appender::rolling;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
-use types::{api_key::ApiKey, pocket::PocketConnectMsgResponse};
+use types::api_key::ApiKey;
 
 #[tokio::main]
 async fn main() {
@@ -96,6 +95,7 @@ fn app() -> Router {
     let account_store = Arc::new(RwLock::new(AccountStore::new()));
     let api_router = Router::new()
     .route("/connect", get(handle_connect_msg))
+    .route("/test", get(payment_route))
     // Minister -> Account
     .route("/controller", post(handle_device_pocket))
     .with_state(account_store)

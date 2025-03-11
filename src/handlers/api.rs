@@ -1,11 +1,11 @@
-use std::{env, sync::Arc};
+use std::{env, sync::Arc, thread, time::Duration};
 
 use axum::{extract::{Request, State}, http::StatusCode, middleware::Next, response::{IntoResponse, Response}, Json};
 use encrypt::{handle_decipher_device_id, handle_decipher_price, handle_env_bytes};
 use tokio::sync::RwLock;
 use tracing::info;
 
-use crate::{store::AccountStore, tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_DEVICE_ID_KEY, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse}}, AppError};
+use crate::{store::AccountStore, tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_DEVICE_ID_KEY, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse, TestResponse}}, AppError};
 
 
 pub async fn handle_connect_msg() -> Result<impl IntoResponse, Response> {
@@ -41,6 +41,11 @@ pub async fn handle_device_pocket(State(account_store): State<Arc<RwLock<Account
         };
         Ok((StatusCode::OK, axum::Json(PocketResponse{price, account, currency: "NGN".to_string()})).into_response())
     }
+}
+
+pub async fn payment_route() -> Result<impl IntoResponse, Response> {
+    thread::sleep(Duration::from_secs(10));
+    Ok((StatusCode::OK, axum::Json(TestResponse{success: true})).into_response())
 }
 
 
