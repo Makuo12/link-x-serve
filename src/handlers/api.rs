@@ -44,7 +44,7 @@ pub async fn handle_device_pocket(State(account_store): State<Arc<RwLock<Account
 }
 
 pub async fn payment_route() -> Result<impl IntoResponse, Response> {
-    thread::sleep(Duration::from_secs(10));
+    thread::sleep(Duration::from_secs(6));
     Ok((StatusCode::OK, axum::Json(TestResponse{success: true})).into_response())
 }
 
