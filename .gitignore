@@ -1,3 +1,4 @@
 /target
 /encrypt/target
+/handle_error/target
 app.env

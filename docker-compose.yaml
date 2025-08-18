@@ -1,34 +1,57 @@
 services:
-  server:
+  api:
+    container_name: 'api'
     build:
       context: .
       dockerfile: Dockerfile
-    env_file: app.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:Si73gangan@postgres:5432/metal?sslmode=disable
+      - RUST_LOG=info
+      - RUST_BACKTRACE=1
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
       - "8080:8080"
-    networks:
-      - app-network
-  caddy:
-    image: caddy/caddy:2.2.1-alpine
-    container_name: caddy-service
     restart: unless-stopped
-    depends_on:
-      - server
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:            
-      - $PWD/Caddyfile:/etc/caddy/Caddyfile
-      - $PWD/site:/srv
-      - caddy_data:/data
-      - caddy_config:/config
     networks:
       - app-network
+  postgres:
+    container_name: 'metal_postgres'
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Si73gangan
+      - POSTGRES_DB=metal
+    ports:
+      - 5105:5432
+    volumes:
+      - data:/var/lib/postgresql/data
+    networks:
+      - app-network
+  # caddy:
+  #   image: caddy/caddy:2.2.1-alpine
+  #   container_name: caddy-service
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - server
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:            
+  #     - $PWD/Caddyfile:/etc/caddy/Caddyfile
+  #     - $PWD/site:/srv
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   networks:
+  #     - app-network
 
 networks:
   app-network:
     driver: bridge
-
 volumes:
-  caddy_data:
-  caddy_config:
+  data:
+  # redisdata:
+  # caddy_data:
+  # caddy_config:

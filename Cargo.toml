@@ -7,14 +7,22 @@ edition = "2021"
 tokio = { version = "1", features = ["full"] }
 axum = { version = "0.8.1", features = ["macros"] }
 serde = { version = "1.0.217", features = ["derive"] }
-encrypt = { path = "./encrypt"}
 serde_json = "1.0"
 bytes = "1.9.0"
-uuid = "1.12.1"
+uuid = { version = "1.12.1", features = ["serde"] }
 dotenvy = "0.15.7"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tracing = { version = "0.1", features = ["log"] }
+sqlx = { version = "0.6.0", features = [ "runtime-tokio-rustls", "migrate", "postgres", "chrono", "uuid" ] }
 tracing-appender = "0.2.3"
 aes-gcm = "0.10.3"
 http-body-util = "0.1.2"
 tower = "0.5.2"
+chrono = { version = "0.4", features = ["serde"] }
+rand = "0.8"
+tower-http = { version = "0.6.6", features = ["cors"] }
+rust-argon2 = "1.0"
+paseto = "2.0"
+# libs
+encrypt = { path = "./encrypt"}
+handle_error = { path = "./handle_error" }

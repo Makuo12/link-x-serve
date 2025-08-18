@@ -2,3 +2,5 @@ target
 Cargo.lock
 encrypt/target
 encrypt/Cargo.lock
+handle_error/target
+handle_error/Cargo.lock

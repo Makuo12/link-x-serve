@@ -1,20 +1,20 @@
 mod types;
-mod store;
 mod tools;
 mod handlers;
+mod db_store;
 
-use std::{collections::HashSet, env::{self, VarError}, sync::Arc};
+use std::{env::{self, VarError}, sync::Arc};
 
-use axum::{extract::{FromRequest, Request, State}, http::status::StatusCode, middleware::{self, Next}, response::{Html, IntoResponse, Response}, routing::{get, post}, Router};
-use encrypt;
-use handlers::api::{handle_api_key, handle_connect_msg, handle_device_pocket, payment_route};
+use axum::{extract::{FromRequest, Request, State}, http::{status::StatusCode, HeaderValue, Method}, middleware::{self, Next}, response::{Html, IntoResponse, Response}, routing::{get, post, put}, Router};
+use handle_error::Error;
 use serde::Serialize;
-use store::AccountStore;
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use tracing_appender::rolling;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 use types::api_key::ApiKey;
+use tower_http::cors::{Any, CorsLayer};
+use crate::{db_store::Store, handlers::{middleware::{auth_middleware, handle_api_key, metal_apk, public_apk}, user::{get_user_profile, login, refresh_token, register, update_user}}, tools::constant::DATABASE_URL, types::cache::Cache};
 
 #[tokio::main]
 async fn main() {
@@ -27,8 +27,6 @@ async fn main() {
         .with_writer(non_blocking)
         .with_span_events(FmtSpan::CLOSE)
         .init();
-
-
     match dotenvy::from_filename("app.env") {
         Ok(p) => p,
         Err(e) => {
@@ -36,76 +34,74 @@ async fn main() {
             return
         }
     };
+    let url = env::var(DATABASE_URL)
+            .map_err(|e| Error::EnvError(e)).expect("failed at key");
+    let store = Store::new(&url).await;
+    sqlx::migrate!()
+        .run(&store.clone().connection)
+        .await
+        .expect("Cannot migrate DB");
+    let cache = Arc::new(Cache::new(&store).await);
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    axum::serve(listener, app()).await.unwrap();
+    axum::serve(listener, app(store, cache)).await.unwrap();
 }
 
 
+fn app(store: Store, cache: Arc<Cache>) -> Router {
+    // Protected routes that require authentication
+    let protected_routes = Router::new()
+        .route("/profile", get(get_user_profile))
+        .route("/update", post(update_user))
+        // .route("/dashboard", get(dashboard_handler))
+        .layer(middleware::from_fn(auth_middleware)); // Auth required for all routes in this group
 
+    // Public routes for user operations (login, register, etc.)
+    let public_user_routes = Router::new()
+        .route("/login", post(login))
+        .route("/refresh", post(refresh_token))
+        .route("/register", post(register));
 
+    // APK routes with caching middleware
+    let public_apk_routes = Router::new()
+        // .route("/", get(get_apk_handler))
+        // .route("/update", post(update_apk_handler))
+        .layer(middleware::from_fn_with_state(cache.clone(), public_apk));
 
-enum AppError {
-    ApiKeyRejection,
-    EnvError(VarError),
-    AcmError(aes_gcm::Error),
-    DeviceNotFound,
-}
+    let metal_apk_routes = Router::new()
+        // .route("/", get(get_metal_apk_handler))
+        // .route("/update", post(update_metal_apk_handler))
+        .layer(middleware::from_fn_with_state(cache.clone(), metal_apk));
 
-impl IntoResponse for AppError {
-    
-    fn into_response(self) -> Response {
-        // How we want errors responses to be serialized
-        #[derive(Serialize)]
-        struct ErrorResponse {
-            message: String,
-        }
-        let (status, message) = match self {
-            AppError::ApiKeyRejection => {
-                (StatusCode::UNAUTHORIZED, "the application api key was not authorized or was not found".to_owned())
-            }
-            AppError::EnvError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, msg.to_string())
-            },
-            AppError::AcmError(_) => {
-                (StatusCode::UNAUTHORIZED, "you do not have permission to access this resource".to_string())
-            },
-            AppError::DeviceNotFound => {
-                (StatusCode::NOT_FOUND, "device not found".to_owned())
-            }
-        };
-        (status, AppJson(ErrorResponse{ message })).into_response()
-    }
-}
+    // Combine all routes and add state
+    let app_router = Router::new()
+        // Public user routes (no auth required)
+        .nest("/user", public_user_routes)
+        // Protected routes (auth required)
+        .nest("/auth", protected_routes)
+        // APK routes
+        .nest("/apk", public_apk_routes)
+        .nest("/metal", metal_apk_routes)
+        // Add state to the entire router
+        .with_state(store);
 
-#[derive(FromRequest)]
-#[from_request(via(axum::Json), rejection(AppError))]
-struct AppJson<T>(T);
+    // Optional: API routes with API key authentication
+    // let api_key = ApiKey::new();
+    // let api_router = Router::new()
+    //     .route("/connect", get(handle_connect_msg))
+    //     .route("/test", get(payment_route))
+    //     .with_state((store.clone(), cache.clone())) // If you need both store and cache
+    //     .route_layer(middleware::from_fn_with_state(api_key, handle_api_key));
 
-impl<T> IntoResponse for AppJson<T>
-where
-    axum::Json<T>: IntoResponse,
-{
-    fn into_response(self) -> Response {
-        axum::Json(self.0).into_response()
-    }
-}
-
-fn app() -> Router {
-    let api_key = ApiKey::new();
-    let account_store = Arc::new(RwLock::new(AccountStore::new()));
-    let api_router = Router::new()
-    .route("/connect", get(handle_connect_msg))
-    .route("/test", get(payment_route))
-    // Minister -> Account
-    .route("/controller", post(handle_device_pocket))
-    .with_state(account_store)
-    .route_layer(middleware::from_fn_with_state(api_key, handle_api_key));
+    // Main application router
     let app = Router::new()
-        .nest("/api", api_router);
-    // let app = app.fallback(handler);
+        .nest("/api", app_router)
+        .layer(
+            CorsLayer::new()
+                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
+                .allow_methods([Method::GET]),
+        );
     app
 }
-
 
 
 #[cfg(test)]
@@ -121,7 +117,13 @@ mod tests {
     #[tokio::test]
     async fn get_connect_msg() {
         dotenvy::from_filename("app.env").unwrap();
-        let app = app();
+        let store = Store::new("postgres://127.0.0.1:5432/metal_test").await;
+        sqlx::migrate!()
+            .run(&store.clone().connection)
+            .await
+            .expect("Cannot migrate DB");
+        let cache = Arc::new(Cache::new(&store).await);
+        let app = app(store, cache);
 
         // `Router` implements `tower::Service<Request<Body>>` so we can
         // call it like any tower service, no need to run an HTTP server.
@@ -145,7 +147,13 @@ mod tests {
     #[tokio::test]
     async fn post_device_id_price() {
         dotenvy::from_filename("app.env").unwrap();
-        let app = app();
+        let store = Store::new("postgres://127.0.0.1:5432/metal_test").await;
+        sqlx::migrate!()
+            .run(&store.clone().connection)
+            .await
+            .expect("Cannot migrate DB");
+        let cache = Arc::new(Cache::new(&store).await);
+        let app = app(store, cache);
 
         // `Router` implements `tower::Service<Request<Body>>` so we can
         // call it like any tower service, no need to run an HTTP server.

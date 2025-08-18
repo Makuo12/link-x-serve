@@ -98,7 +98,7 @@ mod tests {
     }
     #[test]
     fn test_api_connect() {
-        let cipher = generate_cipher_to_connect(&DRIVER_CONNECT_MSG, ENCRYPTION_CONNECT_KEY);
+        let cipher = generate_cipher_to_connect(&CONNECT_MSG, ENCRYPTION_CONNECT_KEY);
         let decipher = generate_decipher_to_connect(cipher, ENCRYPTION_CONNECT_KEY);
         panic!("{:?}, {:?}", cipher, decipher.map(|c| c as char));
         assert!(decipher.contains(&b'l') && decipher.contains(&b'l'));
