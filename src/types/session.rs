@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use chrono::{DateTime, Duration, Utc};
 
-use crate::{db_store::Store, tools::constant::SESSION_KEY};
+use crate::db_store::Store;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Session {
@@ -153,7 +153,7 @@ pub fn issue_token(id: Uuid) -> Result<TokenPair, Error> {
     };
     
     // Access token (expires in 15 minutes)
-    let access_exp = now + Duration::minutes(15);
+    let access_exp = now + Duration::hours(24);
     let access_token = paseto::tokens::PasetoBuilder::new()
         .set_encryption_key(&Vec::from(key_bytes))
         .set_expiration(&access_exp)

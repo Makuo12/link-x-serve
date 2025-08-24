@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, sync::Arc};
 
 use argon2::Config;
 use axum::{extract::State, http::StatusCode, response::{IntoResponse, Response}, Extension, Json};
@@ -8,7 +8,7 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{db_store::Store, handlers::middleware::AuthenticatedUser, tools::constant::SESSION_KEY};
+use crate::{db_store::Store, handlers::middleware::AuthenticatedUser, tools::constant::SESSION_KEY, types::cache::Cache};
 
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -83,7 +83,8 @@ pub fn verify_token(
     Ok(user_id)
 }
 
-pub async fn register(State(store): State<Store>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+pub async fn register(State(state): State<(Store, Arc<Cache>)>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+    let store = state.0;
     let hashed_password = hash_password(packet.hashed_password.as_bytes());
     let result = store.add_user(packet.first_name, hashed_password, packet.last_name, packet.email).await;
     match result {
@@ -106,7 +107,8 @@ pub async fn register(State(store): State<Store>, Json(packet): Json<UserPostReq
         }
     }
 }
-pub async fn update_user(State(store): State<Store>, Extension(user): Extension<AuthenticatedUser>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+pub async fn update_user(State(state): State<(Store, Arc<Cache>)>, Extension(user): Extension<AuthenticatedUser>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+    let store = state.0;
     let result_user = store.get_user(user.user_id).await;
     
     let user_data = match result_user {
@@ -114,7 +116,7 @@ pub async fn update_user(State(store): State<Store>, Extension(user): Extension<
         Err(e) => return Ok(e.into_response()),
     };
 
-    let result = store.update_user(&packet.first_name, &packet.last_name, &user_data.id).await;
+    let result = store.update_user(&packet.first_name, &packet.email, &packet.last_name, &user_data.id).await;
     match result {
         Ok(updated) => {
             if updated {
@@ -126,7 +128,7 @@ pub async fn update_user(State(store): State<Store>, Extension(user): Extension<
                 let response = UserResponse {
                     first_name: packet.first_name,
                     last_name: packet.last_name,
-                    email: "".to_string(),
+                    email: packet.email,
                     session: SessionResponse { access_token: session.access_token, refresh_token: session.refresh_token, expires_at: session.expires_at}
                 };
                 return Ok((StatusCode::CREATED, Json(response)).into_response());
@@ -139,7 +141,8 @@ pub async fn update_user(State(store): State<Store>, Extension(user): Extension<
         }
     }
 }
-pub async fn refresh_token(State(store): State<Store>, Json(packet): Json<RefreshTokenRequest>) -> Result<impl IntoResponse, Response> {
+pub async fn refresh_token(State(state): State<(Store, Arc<Cache>)>, Json(packet): Json<RefreshTokenRequest>) -> Result<impl IntoResponse, Response> {
+    let store = state.0;
     let result = store.refresh_access_token(&packet.refresh_token).await;
     match result {
         Ok(token) => Ok((StatusCode::OK, Json(RefreshTokenResponse{access_token: token})).into_response()),
@@ -147,7 +150,8 @@ pub async fn refresh_token(State(store): State<Store>, Json(packet): Json<Refres
     }
 }
 
-pub async fn login(State(store): State<Store>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+pub async fn login(State(state): State<(Store, Arc<Cache>)>, Json(packet): Json<UserPostRequest>) ->Result<impl IntoResponse, Response> {
+    let store = state.0;
     let result_user = store.get_user_by_email(packet.email).await; 
     let user = match result_user {
         Ok(u) => u,
@@ -182,10 +186,11 @@ pub async fn login(State(store): State<Store>, Json(packet): Json<UserPostReques
 
 // Get current user (requires authentication)
 pub async fn get_user_profile(
-    State(store): State<Store>, 
+    State(state): State<(Store, Arc<Cache>)>, 
     Extension(user): Extension<AuthenticatedUser>,
 ) -> Result<impl IntoResponse, Response> {
     // Get user by ID from the authenticated token
+    let store = state.0;
     let result_user = store.get_user(user.user_id).await;
     
     let user_data = match result_user {

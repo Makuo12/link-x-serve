@@ -1,4 +1,24 @@
 services:
+  postgres:
+    container_name: 'metal_postgres'
+    image: postgres:15
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Si73gangan
+      - POSTGRES_DB=metal
+    ports:
+      - 5105:5432
+    volumes:
+      - data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d metal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - app-network
   api:
     container_name: 'api'
     build:
@@ -12,22 +32,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "8081:8081"
     restart: unless-stopped
-    networks:
-      - app-network
-  postgres:
-    container_name: 'metal_postgres'
-    image: postgres:15-alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Si73gangan
-      - POSTGRES_DB=metal
-    ports:
-      - 5105:5432
-    volumes:
-      - data:/var/lib/postgresql/data
     networks:
       - app-network
   # caddy:

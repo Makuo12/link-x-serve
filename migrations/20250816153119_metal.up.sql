@@ -1,10 +1,12 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE "users" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT (now()),
     "hashed_password" varchar NOT NULL,
     "first_name" varchar NOT NULL,
-    "last_name" varchar NOT NULL
+    "last_name" varchar NOT NULL,
+    "email" varchar NOT NULL UNIQUE
 );
 CREATE TABLE "sessions" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
@@ -29,7 +31,9 @@ CREATE TABLE "businesses" (
     "location" varchar NOT NULL,
     "geolocation" point NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "updated_at" timestamptz NOT NULL DEFAULT (now())
+    "updated_at" timestamptz NOT NULL DEFAULT (now()),
+    "lat" double precision NOT NULL,
+    "lon" double precision NOT NULL
 );
 CREATE TABLE "Accounts" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
@@ -49,7 +53,7 @@ CREATE TABLE "devices_accessible" (
     "updated_at" timestamptz NOT NULL DEFAULT (now())
 );
 CREATE TABLE "devices" (
-    "id" uuid UNIQUE PRIMARY KEY NOT NULL,
+    "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
     "device_id" varchar NOT NULL,
     "name" varchar NOT NULL,
     "account_id" uuid NOT NULL,
@@ -57,17 +61,22 @@ CREATE TABLE "devices" (
     "apk_key" varchar NOT NULL,
     "business_id" uuid NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "updated_at" timestamptz NOT NULL DEFAULT (now())
+    "updated_at" timestamptz NOT NULL DEFAULT (now()),
+    "main_id" uuid NOT NULL,
+    "id_key" varchar NOT NULL,
+    "price_key" varchar NOT NULL
 );
 CREATE TABLE "customers" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
-    "first_name" varchar NOT NULL DEFAULT 'none',
-    "last_name" varchar NOT NULL DEFAULT 'none',
+    "first_name" varchar NOT NULL,
+    "last_name" varchar NOT NULL,
     "public_key" varchar NOT NULL,
     "private_key" varchar NOT NULL,
     "bank_id" varchar NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "updated_at" timestamptz NOT NULL DEFAULT (now())
+    "updated_at" timestamptz NOT NULL DEFAULT (now()),
+    "public_id" uuid NOT NULL,
+    "file_name" varchar NOT NULL
 );
 CREATE TABLE "payments" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
@@ -81,6 +90,7 @@ CREATE TABLE "payments" (
     "created_at" timestamptz NOT NULL DEFAULT (now()),
     "updated_at" timestamptz NOT NULL DEFAULT (now())
 );
+-- Foreign keys
 ALTER TABLE "sessions"
 ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 ALTER TABLE "banks"
@@ -89,8 +99,6 @@ ALTER TABLE "businesses"
 ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 ALTER TABLE "devices_accessible"
 ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
-ALTER TABLE "devices"
-ADD FOREIGN KEY ("id") REFERENCES "devices_accessible" ("id");
 ALTER TABLE "devices"
 ADD FOREIGN KEY ("account_id") REFERENCES "Accounts" ("id");
 ALTER TABLE "devices"

@@ -29,7 +29,20 @@ impl Store {
             .map(|_| true)
             .map_err(|e| Error::DatabaseQueryError(e))
     }
-
+    pub async fn get_bank_user_id(&self, user_id: &Uuid) -> Result<Bank, Error> {
+        sqlx::query("SELECT * FROM banks WHERE user_id = $1")
+            .bind(user_id)
+            .map(|row: PgRow| Bank {
+                id: row.get("id"),
+                user_id: row.get("user_id"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                apk_key: row.get("apk_key"), // fetch new field
+            })
+            .fetch_one(&self.connection)
+            .await
+            .map_err(|e| Error::DatabaseQueryError(e))
+    }
     pub async fn get_bank(&self, id: &str) -> Result<Bank, Error> {
         sqlx::query("SELECT * FROM banks WHERE id = $1")
             .bind(id)

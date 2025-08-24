@@ -41,8 +41,8 @@ impl Store {
         let (id,): (Uuid,) = sqlx::query_as(query)
             .bind(hashed_password)
             .bind(first_name.clone())
-            .bind(email.clone())
             .bind(last_name.clone())
+            .bind(email.clone())
             .fetch_one(&self.connection)
             .await
             .map_err(|e| Error::DatabaseQueryError(e))?;
@@ -86,16 +86,17 @@ impl Store {
             .map_err(|e| Error::DatabaseQueryError(e))
     }
 
-    pub async fn update_user(&self, first_name: &String, last_name: &String, id: &Uuid) -> Result<bool, Error> {
+    pub async fn update_user(&self, first_name: &String, email: &String, last_name: &String, id: &Uuid) -> Result<bool, Error> {
         let query = r#"
             UPDATE users
-            SET first_name = $2, last_name = $3, updated_at = $4
+            SET first_name = $2, last_name = $3, email = $4, updated_at = $5
             WHERE id = $1
         "#;
         sqlx::query(query)
             .bind(id)
             .bind(first_name)
             .bind(last_name)
+            .bind(email)
             .bind(Utc::now())
             .execute(&self.connection)
             .await
@@ -103,12 +104,12 @@ impl Store {
             .map_err(|e| Error::DatabaseQueryError(e))
     }
 
-    pub async fn delete_user(&self, id: Uuid) -> Result<bool, Error> {
-        sqlx::query("DELETE FROM users WHERE id = $1")
-            .bind(id)
-            .execute(&self.connection)
-            .await
-            .map(|_| true)
-            .map_err(|e| Error::DatabaseQueryError(e))
-    }
+    // pub async fn delete_user(&self, id: Uuid) -> Result<bool, Error> {
+    //     sqlx::query("DELETE FROM users WHERE id = $1")
+    //         .bind(id)
+    //         .execute(&self.connection)
+    //         .await
+    //         .map(|_| true)
+    //         .map_err(|e| Error::DatabaseQueryError(e))
+    // }
 }

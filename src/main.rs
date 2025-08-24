@@ -5,16 +5,13 @@ mod db_store;
 
 use std::{env::{self, VarError}, sync::Arc};
 
-use axum::{extract::{FromRequest, Request, State}, http::{status::StatusCode, HeaderValue, Method}, middleware::{self, Next}, response::{Html, IntoResponse, Response}, routing::{get, post, put}, Router};
+use axum::{http::Method, middleware::{self}, routing::{get, post, put}, Router};
 use handle_error::Error;
-use serde::Serialize;
-use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
 use tracing_appender::rolling;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
-use types::api_key::ApiKey;
 use tower_http::cors::{Any, CorsLayer};
-use crate::{db_store::Store, handlers::{middleware::{auth_middleware, handle_api_key, metal_apk, public_apk}, user::{get_user_profile, login, refresh_token, register, update_user}}, tools::constant::DATABASE_URL, types::cache::Cache};
+use crate::{db_store::Store, handlers::{account::get_account, bank::get_bank, business::get_business, customer::create_customer, metal::get_metal_health, middleware::{auth_middleware, metal_apk, public_apk}, payment::{customer_pay, metal_pay}, user::{get_user_profile, login, refresh_token, register, update_user}}, tools::constant::DATABASE_URL, types::cache::Cache};
 
 #[tokio::main]
 async fn main() {
@@ -42,64 +39,58 @@ async fn main() {
         .await
         .expect("Cannot migrate DB");
     let cache = Arc::new(Cache::new(&store).await);
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    // handlers::business::setup_device(&store).await;
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8082").await.unwrap();
     axum::serve(listener, app(store, cache)).await.unwrap();
 }
+
 
 
 fn app(store: Store, cache: Arc<Cache>) -> Router {
     // Protected routes that require authentication
     let protected_routes = Router::new()
         .route("/profile", get(get_user_profile))
-        .route("/update", post(update_user))
-        // .route("/dashboard", get(dashboard_handler))
-        .layer(middleware::from_fn(auth_middleware)); // Auth required for all routes in this group
+        .route("/update", put(update_user))
+        .route("/businesses", get(get_business))
+        .route("/bank", get(get_bank))
+        .route("/account", get(get_account))
+        .layer(middleware::from_fn(auth_middleware));
 
-    // Public routes for user operations (login, register, etc.)
+    // Public routes for user operations
     let public_user_routes = Router::new()
         .route("/login", post(login))
         .route("/refresh", post(refresh_token))
         .route("/register", post(register));
 
-    // APK routes with caching middleware
+    // APK routes
     let public_apk_routes = Router::new()
-        // .route("/", get(get_apk_handler))
-        // .route("/update", post(update_apk_handler))
-        .layer(middleware::from_fn_with_state(cache.clone(), public_apk));
+        .route("/connect", post(create_customer))
+        .route("/payment", post(customer_pay))
+        .layer(middleware::from_fn(public_apk));
 
     let metal_apk_routes = Router::new()
-        // .route("/", get(get_metal_apk_handler))
-        // .route("/update", post(update_metal_apk_handler))
-        .layer(middleware::from_fn_with_state(cache.clone(), metal_apk));
+        .route("/heathly", get(get_metal_health))
+        .route("/payment", post(metal_pay))
+        .layer(middleware::from_fn(metal_apk));
 
-    // Combine all routes and add state
     let app_router = Router::new()
-        // Public user routes (no auth required)
         .nest("/user", public_user_routes)
-        // Protected routes (auth required)
         .nest("/auth", protected_routes)
-        // APK routes
         .nest("/apk", public_apk_routes)
         .nest("/metal", metal_apk_routes)
-        // Add state to the entire router
-        .with_state(store);
+        .with_state((store, cache));
+        
 
-    // Optional: API routes with API key authentication
-    // let api_key = ApiKey::new();
-    // let api_router = Router::new()
-    //     .route("/connect", get(handle_connect_msg))
-    //     .route("/test", get(payment_route))
-    //     .with_state((store.clone(), cache.clone())) // If you need both store and cache
-    //     .route_layer(middleware::from_fn_with_state(api_key, handle_api_key));
+    // ✅ FIX: Add allow_headers
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE, Method::OPTIONS])
+        .allow_headers(Any); // <-- this allows Content-Type and Authorization headers
 
-    // Main application router
     let app = Router::new()
         .nest("/api", app_router)
-        .layer(
-            CorsLayer::new()
-                .allow_origin("http://localhost:5173".parse::<HeaderValue>().unwrap())
-                .allow_methods([Method::GET]),
-        );
+        .layer(cors);
+
     app
 }
 

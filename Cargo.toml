@@ -21,7 +21,12 @@ tower = "0.5.2"
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.8"
 tower-http = { version = "0.6.6", features = ["cors"] }
+openssl = { version = "0.10", features = ["vendored"] }
 rust-argon2 = "1.0"
+p256 = { version = "0.13.2", features = ["ecdsa", "ecdh"] }
+rand_core = { version = "0.6", features = ["std"] }
+elliptic-curve = "0.13" # Or the latest version
+k256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
 paseto = "2.0"
 # libs
 encrypt = { path = "./encrypt"}

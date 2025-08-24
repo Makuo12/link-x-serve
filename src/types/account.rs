@@ -44,7 +44,7 @@ pub struct AccountItemStore {
 impl Store {
     pub async fn add_account(&self, account: &Account) -> Result<bool, Error> {
         let query = r#"
-            INSERT INTO accounts (id, business_id, bank_id, account_name, account_number, created_at, updated_at)
+            INSERT INTO Accounts (id, business_id, bank_id, account_name, account_number, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7)
         "#;
         sqlx::query(query)
@@ -60,8 +60,8 @@ impl Store {
             .map_err(|e| Error::DatabaseQueryError(e))
     }
 
-    pub async fn get_account(&self, id: Uuid) -> Result<Account, Error> {
-        sqlx::query("SELECT * FROM accounts WHERE id = $1")
+    pub async fn get_account(&self, id: &Uuid) -> Result<Account, Error> {
+        sqlx::query("SELECT * FROM \"Accounts\" WHERE id = $1")
             .bind(id)
             .map(|row: PgRow| Account {
                 id: row.get("id"),
@@ -75,8 +75,22 @@ impl Store {
             .await
             .map_err(|e| Error::DatabaseQueryError(e))
     }
+    pub async fn get_accounts_user_id(&self) -> Result<Vec<Account>, Error> {
+        sqlx::query("SELECT * FROM Accounts")
+            .map(|row: PgRow| Account {
+                id: row.get("id"),
+                bank_id: row.get("bank_id"),
+                account_name: row.get("account_name"),
+                account_number: row.get("account_number"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            })
+            .fetch_all(&self.connection)
+            .await
+            .map_err(|e| Error::DatabaseQueryError(e))
+    }
     pub async fn get_accounts(&self) -> Result<Vec<Account>, Error> {
-        sqlx::query("SELECT * FROM accounts")
+        sqlx::query("SELECT * FROM Accounts")
             .map(|row: PgRow| Account {
                 id: row.get("id"),
                 bank_id: row.get("bank_id"),
@@ -91,7 +105,7 @@ impl Store {
     }
     pub async fn update_account(&self, account: &Account) -> Result<bool, Error> {
         let query = r#"
-            UPDATE accounts
+            UPDATE Accounts
             SET business_id = $2, bank_id = $3, account_name = $4, account_number = $5, updated_at = $6
             WHERE id = $1
         "#;
@@ -108,7 +122,7 @@ impl Store {
     }
 
     pub async fn delete_account(&self, id: Uuid) -> Result<bool, Error> {
-        sqlx::query("DELETE FROM accounts WHERE id = $1")
+        sqlx::query("DELETE FROM Accounts WHERE id = $1")
             .bind(id)
             .execute(&self.connection)
             .await

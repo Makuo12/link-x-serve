@@ -1,23 +1,13 @@
-use std::{env, sync::Arc, thread, time::Duration};
+// use std::{env, sync::Arc, thread, time::Duration};
 
-use axum::{extract::{Request, State}, http::StatusCode, middleware::Next, response::{IntoResponse, Response}, Json};
-use encrypt::{handle_decipher_device_id, handle_decipher_price, handle_env_bytes};
-use tokio::sync::RwLock;
-use tracing::info;
+// use axum::{extract::{Request, State}, http::StatusCode, middleware::Next, response::{IntoResponse, Response}, Json};
+// use encrypt::{handle_decipher_device_id, handle_decipher_price, handle_env_bytes};
+// use tokio::sync::RwLock;
+// use tracing::info;
 
-use crate::{tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_DEVICE_ID_KEY, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse, TestResponse}}};
+// use crate::{tools::constant::{CONNECT_MSG, ENCRYPTION_CONNECT_KEY, ENCRYPTION_DEVICE_ID_KEY, ENCRYPTION_KEY_PRICE, XMINISTER_API_KEY}, types::{api_key::ApiKey, pocket::{PocketConnectMsgResponse, PocketRequest, PocketResponse, TestResponse}}};
 
 
-// pub async fn handle_connect_msg() -> Result<impl IntoResponse, Response> {
-//     let connect_msg = env::var(CONNECT_MSG)
-//         .map_err(|e| AppError::EnvError(e).into_response())?;
-//     let connect_key = env::var(ENCRYPTION_CONNECT_KEY)
-//         .map_err(|e| AppError::EnvError(e).into_response())?;
-//     let cipher = encrypt::handle_cipher_connect(
-//         handle_env_bytes(connect_key)
-//         , connect_msg);
-//     Ok((StatusCode::OK, axum::Json(PocketConnectMsgResponse{msg: cipher})).into_response())
-// }
 
 // pub async fn handle_device_pocket(State(account_store): State<Arc<RwLock<AccountStore>>>, Json(pocket): Json<PocketRequest>) -> Result<impl IntoResponse, Response> {
 //     let price_key = env::var(ENCRYPTION_KEY_PRICE)

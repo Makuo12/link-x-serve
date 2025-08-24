@@ -5,9 +5,7 @@ edition = "2021"
 
 [dependencies]
 tracing = { version = "0.1", features = ["log"] }
-reqwest = "0.11"
-reqwest-middleware = "0.1.1"
-sqlx = { version = "0.6.0", features = [ "postgres" ] }
+sqlx = { version = "0.6.0", features = ["runtime-tokio-rustls", "postgres"] }
 rust-argon2 = "1.0"
 axum = { version = "0.8.1", features = ["macros"] }
 aes-gcm = "0.10.3"

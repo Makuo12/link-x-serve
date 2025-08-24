@@ -3,8 +3,6 @@ use std::env::VarError;
 use axum::{extract::FromRequest, http::StatusCode, response::{IntoResponse, Response}};
 use serde::Serialize;
 use argon2::Error as ArgonError;
-use reqwest::Error as ReqwestError;
-use reqwest_middleware::Error as MiddlewareReqwestError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -16,8 +14,6 @@ pub enum Error {
     ArgonLibraryError(ArgonError),
     DatabaseQueryError(sqlx::Error),
     MigrationError(sqlx::migrate::MigrateError),
-    ReqwestAPIError(ReqwestError),
-    MiddlewareReqwestAPIError(MiddlewareReqwestError),
     ClientError(APILayerError),
     ServerError(APILayerError),
     ApiKeyRejection,
@@ -25,7 +21,7 @@ pub enum Error {
     AcmError(aes_gcm::Error),
     DeviceNotFound,
     InvalidSessionKey(String),
-    TokenCreationError(String)
+    TokenCreationError(String),
     // other variants...
 }
 
@@ -65,8 +61,6 @@ impl std::fmt::Display for Error {
             Error::ArgonLibraryError(_) => write!(f, "Cannot verifiy password"),
             Error::DatabaseQueryError(_) => write!(f, "Cannot update, invalid data"),
             Error::MigrationError(_) => write!(f, "Cannot migrate data"),
-            Error::ReqwestAPIError(err) => write!(f, "External API error: {}", err),
-            Error::MiddlewareReqwestAPIError(err) => write!(f, "External API error: {}", err),
             Error::ClientError(err) => write!(f, "External Client error: {}", err),
             Error::ServerError(err) => write!(f, "External Server error: {}", err),
             Error::ApiKeyRejection => write!(f, "the application api key was not authorized or was not found"),
@@ -135,14 +129,6 @@ impl IntoResponse for Error {
             Error::MigrationError(migrate_error) => (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         format!("database migration failed: {}", migrate_error),
-                    ),
-            Error::ReqwestAPIError(error) => (
-                        StatusCode::BAD_GATEWAY,
-                        format!("external API error: {}", error),
-                    ),
-            Error::MiddlewareReqwestAPIError(error) => (
-                        StatusCode::BAD_GATEWAY,
-                        format!("middleware API error: {}", error),
                     ),
             Error::ClientError(apilayer_error) => (
                         StatusCode::BAD_REQUEST,

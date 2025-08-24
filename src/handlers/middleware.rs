@@ -2,16 +2,15 @@ use std::{env, sync::Arc};
 
 use axum::{
     extract::{Request, State},
-    http::{header::{self, AUTHORIZATION}, HeaderMap, StatusCode},
+    http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
-    Json,
 };
 use handle_error::Error;
-use tracing::info;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{db_store::Store, tools::constant::{SESSION_KEY, XMINISTER_API_KEY, XMINISTER_METAL_API_KEY}, types::{api_key::ApiKey, cache::Cache}};
+use crate::{db_store::Store, tools::constant::{SESSION_KEY, XMINISTER_API_KEY, XMINISTER_METAL_API_KEY}, types::cache::Cache};
 
 pub async fn auth_middleware(
     mut request: Request,
@@ -20,7 +19,7 @@ pub async fn auth_middleware(
     // Extract token from Authorization header
     let auth_header = request
         .headers()
-        .get(header::AUTHORIZATION)
+        .get("Authorization")
         .and_then(|header| header.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)
         .map_err(|_| Error::CannotDecryptToken)?;
@@ -72,11 +71,14 @@ fn extract_token_from_headers(auth_header: &str) -> Result<String, Error> {
 }
 
 // User context that will be available in your handlers
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthenticatedUser {
     pub user_id: Uuid,
 }
-
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthenticatedApk {
+    pub apk: String,
+}
 // Extension trait to add user to request extensions
 impl AuthenticatedUser {
     pub fn new(user_id: Uuid) -> Self {
@@ -84,58 +86,38 @@ impl AuthenticatedUser {
     }
 }
 
-
-
-
-pub async fn metal_apk(
-State(cache): State<Arc<Cache>>, request: Request, next: Next
-) -> Result<Response, Error> {
-    handle_api_key(cache, ApiKeyType::XMinisterMetal,request, next).await
-}
-
-pub async fn public_apk(
-State(cache): State<Arc<Cache>>, request: Request, next: Next
-) -> Result<Response, Error> {
-    handle_api_key(cache, ApiKeyType::XMinister,request, next).await
-}
-
-pub async fn handle_api_key(cache: Arc<Cache>, key_type: ApiKeyType, request: Request, next: Next) -> Result<Response, Error> {
-    let key;
-    let mut key_found = false;
-    
-    match key_type {
-        ApiKeyType::XMinister => {
-            key = env::var(XMINISTER_API_KEY)
-                .map_err(|e| Error::EnvError(e))?;
-            let list = cache.banks.try_read()
-                .map_err(|e| Error::Unauthorized)?;
-            for api_key in list.iter() {
-                if api_key.apk_key == key {
-                    key_found = true;
-                    break;
-                }
-            }
-        },
-        ApiKeyType::XMinisterMetal => {
-            key = env::var(XMINISTER_METAL_API_KEY)
-                .map_err(|e| Error::EnvError(e))?;
-            let list = cache.devices.try_read()
-                .map_err(|e| Error::Unauthorized)?;
-            for api_key in list.iter() {
-                if api_key.apk_key == key {
-                    key_found = true;
-                    break;
-                }
-            }
-        },
-    }
-    
-    if key_found {
-        Ok(next.run(request).await)
-    } else {
-        Err(Error::ApiKeyRejection) // Return error instead of calling next()
+impl AuthenticatedApk {
+    pub fn new(apk: String) -> Self {
+        Self { apk }
     }
 }
+
+pub async fn metal_apk(mut request: Request, next: Next
+) -> Result<Response, Error> {
+    let auth_header = request
+        .headers()
+        .get(XMINISTER_METAL_API_KEY)
+        .and_then(|header| header.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)
+        .map_err(|_| Error::CannotDecryptToken)?;
+    let key = auth_header.to_string();
+    request.extensions_mut().insert(AuthenticatedApk::new(key));
+    Ok(next.run(request).await)
+}
+
+pub async fn public_apk(mut request: Request, next: Next
+) -> Result<Response, Error> {
+    let auth_header = request
+        .headers()
+        .get(XMINISTER_API_KEY)
+        .and_then(|header| header.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)
+        .map_err(|_| Error::CannotDecryptToken)?;
+    let key = auth_header.to_string();
+    request.extensions_mut().insert(AuthenticatedApk::new(key));
+    Ok(next.run(request).await)
+}
+
 
 
 pub enum ApiKeyType {

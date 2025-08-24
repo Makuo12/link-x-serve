@@ -13,11 +13,13 @@ pub struct Business {
     pub name: String,
     pub location: String,
     pub geolocation: (f64, f64), // Postgres POINT → tuple (x=lng, y=lat)
+    pub lat: f64,
+    pub long: f64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 
 }
-
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GeoPoint {
     pub latitude: f64,
     pub longitude: f64,
@@ -26,7 +28,7 @@ pub struct GeoPoint {
 impl Store {
     pub async fn add_business(&self, business: &Business) -> Result<bool, Error> {
         let query = r#"
-            INSERT INTO businesses (id, user_id, name, location, geolocation, created_at, updated_at)
+            INSERT INTO businesses (id, user_id, name, location, geolocation, lat, lon, created_at, updated_at)
             VALUES ($1, $2, $3, $4, point($5, $6), $7, $8)
         "#;
         sqlx::query(query)
@@ -36,6 +38,8 @@ impl Store {
             .bind(&business.location)
             .bind(business.geolocation.0)
             .bind(business.geolocation.1)
+            .bind(business.lat)
+            .bind(business.long)
             .bind(business.created_at)
             .bind(business.updated_at)
             .execute(&self.connection)
@@ -43,23 +47,48 @@ impl Store {
             .map(|_| true)
             .map_err(|e| Error::DatabaseQueryError(e))
     }
+    pub async fn get_businesses_user_id(&self, user_id: Uuid) -> Result<Vec<Business>, Error> {
+        sqlx::query("SELECT * FROM businesses WHERE user_id = $1")
+            .bind(user_id)
+            .map(|row: PgRow| {
+                Business {
+                    id: row.get("id"),
+                    user_id: row.get("user_id"),
+                    name: row.get("name"),
+                    location: row.get("location"),
+                    geolocation: (0.0, 0.0),
+                    lat: row.get("lat"),
+                    long: row.get("lon"),
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                }
+            })
+            .fetch_all(&self.connection)
+            .await
+            .map_err(|e| Error::DatabaseQueryError(e))
+    }
 
     pub async fn get_business(&self, id: Uuid) -> Result<Business, Error> {
         sqlx::query("SELECT * FROM businesses WHERE id = $1")
             .bind(id)
-            .map(|row: PgRow| Business {
-                id: row.get("id"),
-                user_id: row.get("user_id"),
-                name: row.get("name"),
-                location: row.get("location"),
-                geolocation: row.get::<(f64, f64), _>("geolocation"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
+            .map(|row: PgRow| {
+                Business {
+                    id: row.get("id"),
+                    user_id: row.get("user_id"),
+                    name: row.get("name"),
+                    location: row.get("location"),
+                    geolocation: (0.0, 0.0),
+                    lat: row.get("lat"),
+                    long: row.get("lon"),
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                }
             })
             .fetch_one(&self.connection)
             .await
             .map_err(|e| Error::DatabaseQueryError(e))
-    }
+}
+
 
     pub async fn update_business(&self, business: &Business) -> Result<bool, Error> {
         let query = r#"
