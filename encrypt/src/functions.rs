@@ -2,7 +2,7 @@
 use aes::{cipher::{consts::{B0, B1}, generic_array::GenericArray, typenum::{UInt, UTerm}, BlockDecrypt, BlockEncrypt}, Aes128};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use aes_gcm::{
-    aead::{Aead, AeadCore}, Aes128Gcm, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
+    aead::Aead, Aes128Gcm, Key, KeyInit // Or `Aes128Gcm`
 };
 use aes_gcm::Nonce as GcmNonce;
 
@@ -45,13 +45,13 @@ pub(crate) fn generate_random_values(count: usize) -> Vec<u8> {
     key
 }
 
-pub(crate) fn vec_to_string(vec: &[u8]) -> String {
-    let mut result = String::new();
-    for i in vec {
-        result.push(*i as char);
-    }
-    return result;
-}
+// pub(crate) fn vec_to_string(vec: &[u8]) -> String {
+//     let mut result = String::new();
+//     for i in vec {
+//         result.push(*i as char);
+//     }
+//     return result;
+// }
 
 // aes_decipher means it uses the Aes128 algorithm to decrypt (16 bits long)
 fn aes_decipher(ciphertext: [u8; 16], key: [u8; 16]) -> GenericArray<u8, UInt<UInt<UInt<UInt<UInt<UTerm, B1>, B0>, B0>, B0>, B0>>{
@@ -83,18 +83,18 @@ pub(crate) fn basic_decipher(ciphertext: [u8; 16], key: [u8; 16]) -> [u8; 16] {
     code
 }
 // basic_cipher means it uses the Aes128 algorithm to encrypt (16 bits long)
-pub(crate) fn aes_cipher(price: [u8; 16], price_key: [u8; 16]) -> [u8;16] {
-    let mut code: [u8; 16] = [0; 16];
-    let mut block = GenericArray::from(price);
-    let key = GenericArray::from(price_key);
-    // Initialize cipher
-    let cipher = Aes128::new(&key);
-    cipher.encrypt_block(&mut block);
-    for i in block.iter().enumerate() {
-        code[i.0] = *i.1;
-    }
-    return code;
-}
+// pub(crate) fn aes_cipher(price: [u8; 16], price_key: [u8; 16]) -> [u8;16] {
+//     let mut code: [u8; 16] = [0; 16];
+//     let mut block = GenericArray::from(price);
+//     let key = GenericArray::from(price_key);
+//     // Initialize cipher
+//     let cipher = Aes128::new(&key);
+//     cipher.encrypt_block(&mut block);
+//     for i in block.iter().enumerate() {
+//         code[i.0] = *i.1;
+//     }
+//     return code;
+// }
 pub(crate) fn generate_cipher_to_connect(connect_msg: &[u8; 9], connect_key: [u8; 16]) -> [u8; 16] {
     // Encrypt the message
     let mut code: [u8; 16] = [0; 16];
@@ -109,19 +109,19 @@ pub(crate) fn generate_cipher_to_connect(connect_msg: &[u8; 9], connect_key: [u8
     }
     return code;
 }
-pub(crate) fn generate_decipher_to_connect(cipher: [u8; 16], connect_key: [u8; 16]) -> [u8; 16] {
-    // Encrypt the message
-    let mut block = GenericArray::from(cipher);
-    let key = GenericArray::from(connect_key);
-    // Initialize cipher
-    let cipher = Aes128::new(&key);
-    cipher.decrypt_block(&mut block);
-    let mut code: [u8; 16] = [0; 16];
-    for i in block.iter().enumerate() {
-        code[i.0] = *i.1;
-    }
-    return code;
-}
+// pub(crate) fn generate_decipher_to_connect(cipher: [u8; 16], connect_key: [u8; 16]) -> [u8; 16] {
+//     // Encrypt the message
+//     let mut block = GenericArray::from(cipher);
+//     let key = GenericArray::from(connect_key);
+//     // Initialize cipher
+//     let cipher = Aes128::new(&key);
+//     cipher.decrypt_block(&mut block);
+//     let mut code: [u8; 16] = [0; 16];
+//     for i in block.iter().enumerate() {
+//         code[i.0] = *i.1;
+//     }
+//     return code;
+// }
 
 pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
     // Key type changed to Aes128Gcm
