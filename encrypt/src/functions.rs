@@ -2,8 +2,9 @@
 use aes::{cipher::{consts::{B0, B1}, generic_array::GenericArray, typenum::{UInt, UTerm}, BlockDecrypt, BlockEncrypt}, Aes128};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use aes_gcm::{
-    aead::{Aead, AeadCore}, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
+    aead::{Aead, AeadCore}, Aes128Gcm, Aes256Gcm, Key, KeyInit, Nonce // Or `Aes128Gcm`
 };
+use aes_gcm::Nonce as GcmNonce;
 
 
 
@@ -20,7 +21,14 @@ pub(crate) fn modify_connect_code(code: &mut [u8; 16], connect_msg: &[u8; 9]) {
         } 
     }
 }
-
+pub(crate) fn generate_randome_names(count: usize) -> String {
+    let mut key: String =String::new();
+    let mut rng = StdRng::from_entropy();
+    for _ in 0..count {
+        key.push(char::from(rng.gen_range(b'a'..=b'z')));
+    }
+    key
+}
 pub(crate) fn generate_random_values(count: usize) -> Vec<u8> {
     let mut key: Vec<u8> = Vec::new();
     let mut rng = StdRng::from_entropy();
@@ -115,11 +123,12 @@ pub(crate) fn generate_decipher_to_connect(cipher: [u8; 16], connect_key: [u8; 1
     return code;
 }
 
-pub fn encrypt_device_id(data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
-    let key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(key);
+pub fn encrypt(data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
+    // Key type changed to Aes128Gcm
+    let key = Key::<Aes128Gcm>::from_slice(key);
+    let cipher = Aes128Gcm::new(key);
     
-    let nonce = Aes256Gcm::generate_nonce(&mut rand::thread_rng());
+    let nonce = GcmNonce::from_slice(&[0u8; 12]);
     let ciphertext = cipher.encrypt(&nonce, data)?;
     
     let mut result = nonce.to_vec();
@@ -128,12 +137,13 @@ pub fn encrypt_device_id(data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Er
     Ok(result)
 }
 
-pub fn decrypt_device_id(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
-    let key = Key::<Aes256Gcm>::from_slice(key);
-    let cipher = Aes256Gcm::new(key);
+pub fn decrypt(encrypted_data: &[u8], key: &[u8]) -> Result<Vec<u8>, aes_gcm::Error> {
+    // Key type changed to Aes128Gcm
+    let key = Key::<Aes128Gcm>::from_slice(key);
+    let cipher = Aes128Gcm::new(key);
     
-    let (nonce, ciphertext) = encrypted_data.split_at(12);
-    let nonce = Nonce::from_slice(nonce);
+    let (nonce, ciphertext_with_tag) = encrypted_data.split_at(12);
+    let nonce = GcmNonce::from_slice(nonce);
     
-    cipher.decrypt(nonce, ciphertext)
+    cipher.decrypt(nonce, ciphertext_with_tag)
 }
