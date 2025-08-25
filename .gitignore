@@ -2,3 +2,4 @@
 /encrypt/target
 /handle_error/target
 app.env
+docker-compose.yaml
