@@ -1,42 +1,50 @@
 # Build stage
 FROM rust:1.89.0 AS builder
+
+# Install musl toolchain for static linking
 RUN rustup target add x86_64-unknown-linux-musl
-RUN apt -y update && apt install -y \
+RUN apt-get update && apt-get install -y \
     musl-tools \
     musl-dev \
     build-essential \
-    gcc-x86-64-linux-gnu \
-    ca-certificates \
-    libssl-dev \
     pkg-config \
+    libssl-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
-COPY ./ .
-ENV RUSTFLAGS='-C linker=x86_64-linux-gnu-gcc'
-ENV CC='gcc'
-ENV CC_x86_64_unknown_linux_musl=x86_64-linux-gnu-gcc
-# Build with optimizations
-RUN cargo build --target x86_64-unknown-linux-musl --release
+COPY . .
+
+# Important: use musl-gcc, not x86_64-linux-gnu-gcc
+ENV CC=musl-gcc
+ENV CARGO_BUILD_TARGET=x86_64-unknown-linux-musl
+
+# Build release binary statically linked
+RUN cargo build --release --target x86_64-unknown-linux-musl
 
 # Runtime stage
 FROM scratch
-# Add necessary runtime files
-# COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 WORKDIR /app
-# Create a non-root user (65532 is commonly used for scratch images)
-# USER 65532:65532
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["/app/link_server", "--health-check"] || exit 1
-# Copy the binary and config
+
+# Copy necessary runtime files (SSL certs if needed)
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy built binary and config
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/link_server ./
 COPY --from=builder /app/app.env ./
 COPY --from=builder /app/banks.json ./
 COPY --from=builder /app/migrations ./db/migration
-# Set resource limits
-ENV RUST_MIN_STACK="8388608"
-ENV RUST_MAX_THREADS="32"
-# Configure graceful shutdown
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ["/app/link_server", "--health-check"] || exit 1
+
+# Environment tuning
+ENV RUST_MIN_STACK=8388608
+ENV RUST_MAX_THREADS=32
+
+# Graceful shutdown
 STOPSIGNAL SIGTERM
-# Run the binary
+
+# Run binary
 CMD ["/app/link_server"]
