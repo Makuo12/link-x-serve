@@ -35,7 +35,7 @@ CREATE TABLE "businesses" (
     "lat" double precision NOT NULL,
     "lon" double precision NOT NULL
 );
-CREATE TABLE "Accounts" (
+CREATE TABLE "accounts" (
     "id" uuid UNIQUE PRIMARY KEY NOT NULL DEFAULT (uuid_generate_v4()),
     "bank_id" varchar NOT NULL,
     "account_name" varchar NOT NULL,
@@ -100,7 +100,7 @@ ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 ALTER TABLE "devices_accessible"
 ADD FOREIGN KEY ("user_id") REFERENCES "users" ("id");
 ALTER TABLE "devices"
-ADD FOREIGN KEY ("account_id") REFERENCES "Accounts" ("id");
+ADD FOREIGN KEY ("account_id") REFERENCES "accounts" ("id");
 ALTER TABLE "devices"
 ADD FOREIGN KEY ("business_id") REFERENCES "businesses" ("id");
 ALTER TABLE "customers"

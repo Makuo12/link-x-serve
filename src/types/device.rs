@@ -105,7 +105,7 @@ impl Store {
             FROM devices d
             JOIN businesses b ON d.business_id = b.id
             JOIN users u ON b.user_id = u.id
-            JOIN "Accounts" a ON d.account_id = a.id
+            JOIN "accounts" a ON d.account_id = a.id
             WHERE d.device_id = $1
         "#;
 

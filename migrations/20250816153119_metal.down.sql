@@ -16,7 +16,7 @@ DROP TABLE IF EXISTS "payments";
 DROP TABLE IF EXISTS "customers";
 DROP TABLE IF EXISTS "devices";
 DROP TABLE IF EXISTS "devices_accessible";
-DROP TABLE IF EXISTS "Accounts";
+DROP TABLE IF EXISTS "accounts";
 DROP TABLE IF EXISTS "businesses";
 DROP TABLE IF EXISTS "banks";
 DROP TABLE IF EXISTS "sessions";
