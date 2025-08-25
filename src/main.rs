@@ -40,7 +40,7 @@ async fn main() {
         .expect("Cannot migrate DB");
     let cache = Arc::new(Cache::new(&store).await);
     // handlers::business::setup_device(&store).await;
-    let listener = tokio::net::TcpListener::bind(":8080").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app(store, cache)).await.unwrap();
 }
 
