@@ -4,6 +4,7 @@ use axum::{extract::State, response::{IntoResponse, Response}, Extension, Json};
 use encrypt::ecc::generate_keys;
 use handle_error::Error;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 use crate::{db_store::Store, handlers::middleware::{AuthenticatedApk, AuthenticatedUser}, types::cache::Cache};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -35,10 +36,11 @@ pub async fn create_customer(State(state): State<(Store, Arc<Cache>)>, Extension
         }
     }
     if !found {
+        info!("not found");
         return Ok(Error::Unauthorized.into_response());
     }
     let keys = generate_keys().map_err(|e| e.into_response())?;
-    let result = store.add_customer(packet.first_name, packet.last_name, keys.public_key, keys.private_key, &bank_id, &keys.file_name).await.map_err(|e| e.into_response())?;
+    let result = store.add_customer(packet.first_name, packet.last_name, keys.public_key, keys.private_key, &bank_id, &keys.file_name, uuid::Uuid::new_v4()).await.map_err(|e| e.into_response())?;
     let customer = store.get_customer(result).await.map_err(|e| e.into_response())?;
     Ok(Json(CustomerResponse {
         public_key: customer.public_key,

@@ -21,10 +21,10 @@ pub struct Customer {
 }
 
 impl Store {
-    pub async fn add_customer(&self, first_name: String, last_name: String, public_key: String, private_key: String, bank_id: &str, file_name: &str) -> Result<Uuid, Error> {
+    pub async fn add_customer(&self, first_name: String, last_name: String, public_key: String, private_key: String, bank_id: &str, file_name: &str, public_id: Uuid) -> Result<Uuid, Error> {
         let query = r#"
-            INSERT INTO customers (first_name, last_name, public_key, private_key, bank_id, file_name)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO customers (first_name, last_name, public_key, private_key, bank_id, file_name, public_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING id
         "#;
         let (id,): (Uuid,) = sqlx::query_as(query)
@@ -34,6 +34,7 @@ impl Store {
             .bind(private_key)
             .bind(bank_id)
             .bind(file_name)
+            .bind(public_id)
             .fetch_one(&self.connection)
             .await
             .map_err(|e| Error::DatabaseQueryError(e))?;
