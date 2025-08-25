@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1.89.1 AS builder
+FROM rust:1.89.0 AS builder
 RUN rustup target add x86_64-unknown-linux-musl
 RUN apt -y update && apt install -y \
     musl-tools \
