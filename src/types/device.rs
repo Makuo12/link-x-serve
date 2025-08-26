@@ -84,7 +84,7 @@ impl Store {
             SELECT 
                 d.device_id,
                 d.name,
-                d.id AS main_device_id,
+                d.main_id AS main_device_id,
                 d.device_type,
                 d.apk_key,
                 d.id_key,
