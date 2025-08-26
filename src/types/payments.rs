@@ -100,8 +100,8 @@ impl Store {
                 c.last_name as customer_last_name
             FROM payments p
             JOIN customers c ON c.id = p.customer_id
-            JOIN devices_accessible d ON d.device_id = p.device_id
-            WHERE p.user_id = $1::uuid
+            JOIN devices_accessible d ON d.id = p.device_id
+            WHERE p.user_id = $1
         "#;
         
         sqlx::query(query)
