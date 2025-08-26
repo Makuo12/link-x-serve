@@ -1,11 +1,11 @@
 
 use std::{str::FromStr, sync::Arc};
 
-use axum::{extract::State, response::{IntoResponse, Response}, Extension, Json};
+use axum::{extract::State, http::StatusCode, response::{IntoResponse, Response}, Extension, Json};
 use chrono::Utc;
 use encrypt::{ecc::{ecc_decrypt_key, generate_keys}, functions::decrypt};
 use handle_error::Error;
-use crate::{db_store::Store, handlers::middleware::{AuthenticatedApk, AuthenticatedUser}, types::cache::Cache};
+use crate::{db_store::Store, handlers::middleware::{AuthenticatedApk, AuthenticatedUser}, types::{cache::Cache, payments::PaymentResponse}};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -21,8 +21,12 @@ pub struct MetalPaymentRequest {
 pub struct MetalPaymentResponse {
     first_name: String,
     last_name: String,
-    price: String,
+    amount: i64,
+}
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UserPaymentResponse {
+    list: Vec<PaymentResponse>
 }
 
 pub async fn metal_pay(State(state): State<(Store, Arc<Cache>)>, Extension(metal): Extension<AuthenticatedApk>,Json(packet): Json<MetalPaymentRequest>) ->Result<impl IntoResponse, Response> {
@@ -56,7 +60,12 @@ pub async fn metal_pay(State(state): State<(Store, Arc<Cache>)>, Extension(metal
         sum = (sum*10) + (c - b'0') as i64;
     }
     let result = store.add_payment(data.main_device_id, sum, customer.id, data.user_id, data.account_bank_id, data.account_name, data.account_number).await.map_err(|e| e.into_response())?;
-    Ok(Json(result).into_response())
+    let response = MetalPaymentResponse {
+        first_name: customer.first_name,
+        last_name: customer.last_name,
+        amount: result.amount,
+    };
+    Ok(Json(response).into_response())
 }
 
 
@@ -88,4 +97,29 @@ pub async fn customer_pay(State(state): State<(Store, Arc<Cache>)>, Extension(me
     }
     let result = store.add_payment(data.main_device_id, sum, customer.id, data.user_id, data.account_bank_id, data.account_name, data.account_number).await.map_err(|e| e.into_response())?;
     Ok(Json(result).into_response())
+}
+
+
+
+
+pub async fn get_payments(
+    State(state): State<(Store, Arc<Cache>)>, 
+    Extension(user): Extension<AuthenticatedUser>,
+) -> Result<impl IntoResponse, Response> {
+    let store = state.0;
+    let cache = state.1;
+    // Get user by ID from the authenticated token
+    let result_user = store.get_user(user.user_id).await;
+    let user_data = match result_user {
+        Ok(u) => u,
+        Err(e) => return Ok(e.into_response()),
+    };
+    let payments = match store.get_payments_user_id(user_data.id).await {
+        Ok(b) => b,
+        Err(e) => return Ok(e.into_response())
+    };
+    let response = UserPaymentResponse {
+        list: payments
+    };
+    return Ok((StatusCode::OK, Json(response)).into_response());
 }

@@ -19,6 +19,20 @@ pub struct Payment {
     pub account_number: String,
 }
 
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct PaymentResponse {
+   device_id: String,
+   amount: i64,
+   bank_id: String,
+   account_name: String,
+   account_number: String,
+   device_name: String,
+   device_type: String,
+   customer_first_name: String,
+   customer_last_name: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PaymentSend {
     pub device_id: Uuid,
@@ -72,22 +86,41 @@ impl Store {
         })
     }
 
-    // pub async fn get_payment(&self, device_id: Uuid) -> Result<Payment, Error> {
-    //     sqlx::query("SELECT * FROM payments WHERE device_id = $1")
-    //         .bind(device_id)
-    //         .map(|row: PgRow| Payment {
-    //             device_id: row.get("device_id"),
-    //             amount: row.get("amount"),
-    //             customer_id: row.get("customer_id"),
-    //             user_id: row.get("user_id"),
-    //             bank_id: row.get("bank_id"),
-    //             account_name: row.get("account_name"),
-    //             account_number: row.get("account_number"),
-    //         })
-    //         .fetch_one(&self.connection)
-    //         .await
-    //         .map_err(|e| Error::DatabaseQueryError(e))
-    // }
+    pub async fn get_payments_user_id(&self, user_id: Uuid) -> Result<Vec<PaymentResponse>, Error> {
+        let query = r#"
+            SELECT
+                p.device_id,
+                p.amount,
+                p.bank_id,
+                p.account_name,
+                p.account_number,
+                d.name as device_name,
+                d.device_type,
+                c.first_name as customer_first_name,
+                c.last_name as customer_last_name
+            FROM payments p
+            JOIN customers c ON c.id = p.customer_id
+            JOIN devices_accessible d ON d.device_id = p.device_id
+            WHERE p.user_id = $1
+        "#;
+        
+        sqlx::query(query)
+            .bind(user_id)
+            .map(|row: PgRow| PaymentResponse {
+                device_id: row.get("device_id"),
+                amount: row.get("amount"),
+                bank_id: row.get("bank_id"),
+                account_name: row.get("account_name"),
+                account_number: row.get("account_number"),
+                device_name: row.get("device_name"),
+                device_type: row.get("device_type"),
+                customer_first_name: row.get("customer_first_name"),
+                customer_last_name: row.get("customer_last_name"),
+            })
+            .fetch_all(&self.connection)
+            .await
+            .map_err(|e| Error::DatabaseQueryError(e))
+    }
 
     // pub async fn update_payment(
     //     &self,

@@ -11,7 +11,7 @@ use tracing::{debug, info, warn};
 use tracing_appender::rolling;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 use tower_http::cors::{Any, CorsLayer};
-use crate::{db_store::Store, handlers::{account::get_account, bank::get_bank, business::get_business, customer::create_customer, metal::get_metal_health, middleware::{auth_middleware, metal_apk, public_apk}, payment::{customer_pay, metal_pay}, user::{get_user_profile, login, refresh_token, register, update_user}}, tools::constant::DATABASE_URL, types::cache::Cache};
+use crate::{db_store::Store, handlers::{account::get_account, bank::get_bank, business::get_business, customer::create_customer, metal::get_metal_health, middleware::{auth_middleware, metal_apk, public_apk}, payment::{customer_pay, get_payments, metal_pay}, user::{get_user_profile, login, refresh_token, register, update_user}}, tools::constant::DATABASE_URL, types::cache::Cache};
 
 #[tokio::main]
 async fn main() {
@@ -54,6 +54,7 @@ fn app(store: Store, cache: Arc<Cache>) -> Router {
         .route("/businesses", get(get_business))
         .route("/bank", get(get_bank))
         .route("/account", get(get_account))
+        .route("/payments", get(get_payments))
         .layer(middleware::from_fn(auth_middleware));
 
     // Public routes for user operations
