@@ -101,7 +101,7 @@ impl Store {
             FROM payments p
             JOIN customers c ON c.id = p.customer_id
             JOIN devices_accessible d ON d.device_id = p.device_id
-            WHERE p.user_id = $1
+            WHERE p.user_id = $1::uuid
         "#;
         
         sqlx::query(query)
