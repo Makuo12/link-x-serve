@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use handle_error::Error;
 use serde::{Serialize, Deserialize};
 use sqlx::postgres::PgRow;
@@ -22,7 +21,7 @@ pub struct Payment {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PaymentResponse {
-   device_id: String,
+   device_id: uuid::Uuid,
    amount: i64,
    bank_id: String,
    account_name: String,
